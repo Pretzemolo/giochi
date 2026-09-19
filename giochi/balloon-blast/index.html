@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<script>
+/* Giaco&Dario: ritmo fisso a 60 aggiornamenti al secondo.
+   Il gioco muove tutto "per frame": senza questo blocco su uno schermo a 120/144 Hz
+   andrebbe 2-2,5 volte più veloce. */
+(function(){
+  var raf=window.requestAnimationFrame.bind(window), caf=window.cancelAnimationFrame.bind(window);
+  var STEP=1000/60, TOL=4, next=0, lastT=-1, ok=true, seq=0, live=new Map();
+  function allow(t){
+    if(t===lastT) return ok; lastT=t;
+    if(!next || t-next>250){ next=t; }
+    if(t>=next-TOL){ next+=STEP; if(next<t-STEP) next=t; ok=true; } else ok=false;
+    return ok;
+  }
+  window.requestAnimationFrame=function(cb){
+    var id=++seq;
+    function run(t){ if(!live.has(id)) return; if(allow(t)){ live.delete(id); cb(t); } else live.set(id, raf(run)); }
+    live.set(id, raf(run)); return id;
+  };
+  window.cancelAnimationFrame=function(id){ if(live.has(id)){ caf(live.get(id)); live.delete(id); } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Balloon Blast!</title>
+    <!-- Tailwind CSS -->
+    <style>/* Tailwind CSS v3 compilato (prima veniva compilato nel browser a ogni apertura) */
+*,::backdrop,:after,:before{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:#3b82f680;--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/*! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com*/*,:after,:before{box-sizing:border-box;border:0 solid #e5e7eb}:after,:before{--tw-content:""}:host,html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;-o-tab-size:4;tab-size:4;font-family:ui-sans-serif,system-ui,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji;font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:initial}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:initial;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:initial}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0}fieldset,legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::-moz-placeholder,textarea::-moz-placeholder{opacity:1;color:#9ca3af}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}.pointer-events-none{pointer-events:none}.pointer-events-auto{pointer-events:auto}.absolute{position:absolute}.relative{position:relative}.inset-0{inset:0}.z-10{z-index:10}.mx-4{margin-left:1rem;margin-right:1rem}.mb-4{margin-bottom:1rem}.mb-6{margin-bottom:1.5rem}.mb-8{margin-bottom:2rem}.ml-2{margin-left:.5rem}.mt-2{margin-top:.5rem}.mt-8{margin-top:2rem}.block{display:block}.flex{display:flex}.hidden{display:none}.h-full{height:100%}.h-screen{height:100vh}.w-full{width:100%}.w-screen{width:100vw}.max-w-lg{max-width:32rem}.resize{resize:both}.flex-col{flex-direction:column}.items-center{align-items:center}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.space-y-4>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1rem*(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1rem*var(--tw-space-y-reverse))}.border{border-width:1px}.border-2{border-width:2px}.border-4{border-width:4px}.border-green-500{--tw-border-opacity:1;border-color:rgb(34 197 94/var(--tw-border-opacity,1))}.border-green-500\/50{border-color:#22c55e80}.border-red-500{--tw-border-opacity:1;border-color:rgb(239 68 68/var(--tw-border-opacity,1))}.bg-black{--tw-bg-opacity:1;background-color:rgb(0 0 0/var(--tw-bg-opacity,1))}.p-4{padding:1rem}.p-8{padding:2rem}.px-4{padding-left:1rem;padding-right:1rem}.py-4{padding-top:1rem;padding-bottom:1rem}.text-left{text-align:left}.text-center{text-align:center}.text-3xl{font-size:1.875rem;line-height:2.25rem}.text-\[10px\]{font-size:10px}.text-sm{font-size:.875rem;line-height:1.25rem}.text-xl{font-size:1.25rem;line-height:1.75rem}.text-xs{font-size:.75rem;line-height:1rem}.font-bold{font-weight:700}.uppercase{text-transform:uppercase}.leading-loose{line-height:2}.leading-tight{line-height:1.25}.text-green-400{--tw-text-opacity:1;color:rgb(74 222 128/var(--tw-text-opacity,1))}.text-green-500{--tw-text-opacity:1;color:rgb(34 197 94/var(--tw-text-opacity,1))}.text-green-700{--tw-text-opacity:1;color:rgb(21 128 61/var(--tw-text-opacity,1))}.text-red-500{--tw-text-opacity:1;color:rgb(239 68 68/var(--tw-text-opacity,1))}.text-white{--tw-text-opacity:1;color:rgb(255 255 255/var(--tw-text-opacity,1))}.text-yellow-400{--tw-text-opacity:1;color:rgb(250 204 21/var(--tw-text-opacity,1))}.drop-shadow-\[0_0_10px_rgba\(239\2c 68\2c 68\2c 0\.8\)\]{--tw-drop-shadow:drop-shadow(0 0 10px #ef4444cc)}.drop-shadow-\[0_0_10px_rgba\(239\2c 68\2c 68\2c 0\.8\)\],.drop-shadow-\[0_0_10px_rgba\(34\2c 197\2c 94\2c 0\.8\)\]{filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.drop-shadow-\[0_0_10px_rgba\(34\2c 197\2c 94\2c 0\.8\)\]{--tw-drop-shadow:drop-shadow(0 0 10px #22c55ecc)}.transition-colors{transition-property:color,background-color,border-color,text-decoration-color,fill,stroke;transition-timing-function:cubic-bezier(.4,0,.2,1);transition-duration:.15s}.duration-0{transition-duration:0s}.hover\:bg-green-500:hover{--tw-bg-opacity:1;background-color:rgb(34 197 94/var(--tw-bg-opacity,1))}.hover\:bg-red-500:hover{--tw-bg-opacity:1;background-color:rgb(239 68 68/var(--tw-bg-opacity,1))}.hover\:text-black:hover{--tw-text-opacity:1;color:rgb(0 0 0/var(--tw-text-opacity,1))}@media (min-width:768px){.md\:text-5xl{font-size:3rem;line-height:1}.md\:text-base{font-size:1rem;line-height:1.5rem}.md\:text-sm{font-size:.875rem;line-height:1.25rem}}
+</style>
+    <!-- Retro Arcade Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <!-- Tone.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Press Start 2P', monospace; /* Classic 8-bit font */
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            touch-action: none;
+            color: #22c55e; /* Tailwind green-500 */
+        }
+        canvas {
+            display: block;
+            image-rendering: pixelated; /* Ensures sharp edges */
+        }
+        
+        /* CRT Scanline Effect Overlay */
+        body::after {
+            content: "";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+            background-size: 100% 4px;
+            z-index: 50;
+            pointer-events: none; /* Let clicks pass through */
+        }
+
+        /* Blinking text animation */
+        .blink {
+            animation: blinker 1s linear infinite;
+        }
+        @keyframes blinker {
+            50% { opacity: 0; }
+        }
+
+        /* Retro box styling */
+        .arcade-box {
+            background-color: black;
+            border: 4px solid #22c55e;
+            box-shadow: 8px 8px 0px 0px rgba(34, 197, 94, 0.3);
+        }
+    </style>
+</head>
+<body class="relative w-screen h-screen">
+
+    <!-- Canvas -->
+    <canvas id="gameCanvas" class="w-full h-full block bg-black"></canvas>
+
+    <!-- UI Layer -->
+    <div id="ui-layer" class="absolute inset-0 pointer-events-none flex flex-col justify-center items-center z-10 p-4">
+        
+        <!-- Main Menu -->
+        <div id="menu-screen" class="pointer-events-auto arcade-box p-8 text-center max-w-lg w-full mx-4">
+            <h1 class="text-3xl md:text-5xl font-bold text-green-500 mb-8 leading-tight drop-shadow-[0_0_10px_rgba(34,197,94,0.8)]">
+                BALLOON<br>BLAST
+            </h1>
+            
+            <div class="border-2 border-green-500/50 p-4 mb-8 text-xs md:text-sm text-green-400 leading-loose text-left">
+                <h3 class="text-yellow-400 mb-4 uppercase text-center">- HOW TO PLAY -</h3>
+                <p>> INTERCETTA IL BERSAGLIO.</p>
+                <p class="mt-2">> LA VELOCITA' AUMENTA.</p>
+                <p class="mt-2 text-red-500">> NON FARLO CADERE!</p>
+            </div>
+
+            <button id="start-btn" class="w-full bg-black hover:bg-green-500 text-green-500 hover:text-black border-4 border-green-500 py-4 px-4 text-sm md:text-base transition-colors duration-0 uppercase blink">
+                INSERISCI GETTONE
+            </button>
+            
+            <p class="text-[10px] text-green-700 mt-8 uppercase">
+                © GIACO AND DARIO STUDIOS
+            </p>
+        </div>
+
+        <!-- Game Over -->
+        <div id="game-over-screen" class="hidden pointer-events-auto arcade-box p-8 text-center max-w-lg w-full mx-4">
+            <h2 class="text-3xl font-bold text-red-500 mb-6 drop-shadow-[0_0_10px_rgba(239,68,68,0.8)]">GAME OVER</h2>
+            <p class="text-sm text-green-400 mb-8">SCORE: <span id="final-score" class="text-yellow-400 text-xl ml-2">0</span></p>
+            
+            <div class="mb-8 text-left border-2 border-green-500/50 p-4">
+                <h3 class="text-xs text-yellow-400 mb-4 text-center uppercase">HI-SCORES</h3>
+                <ul id="leaderboard-list" class="space-y-4 text-xs">
+                    <!-- Leaderboard injected here -->
+                </ul>
+            </div>
+
+            <button id="restart-btn" class="w-full bg-black hover:bg-red-500 text-red-500 hover:text-black border-4 border-red-500 py-4 px-4 text-sm transition-colors duration-0 uppercase">
+                CONTINUE?
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let gameState = 'menu'; 
+        let score = 0;
+        let leaderboard = []; 
+        
+        // Classic 8-bit colors (Neon/VGA style)
+        const BALLOON_COLORS = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
+        
+        // 8-bit Audio Setup (Square and Sawtooth waves for retro feel)
+        const popSynth = new Tone.Synth({
+            oscillator: { type: 'square' },
+            envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.05 }
+        }).toDestination();
+        
+        const overSynth = new Tone.Synth({
+            oscillator: { type: 'sawtooth' },
+            envelope: { attack: 0.05, decay: 0.5, sustain: 0.2, release: 1 }
+        }).toDestination();
+
+        let stars = [];
+        let particles = [];
+
+        const balloon = {
+            x: 0,
+            y: 0,
+            size: 0,
+            color: '#ff0000',
+            speedY: 0,
+            
+            init() {
+                const minDimension = Math.min(canvas.width, canvas.height);
+                // Reduced pixel block size for smaller, more challenging balloons
+                this.size = Math.max(10, Math.min(24, minDimension * 0.03));
+                this.resetPosition();
+                this.calculateSpeed();
+            },
+            
+            resetPosition() {
+                this.y = -this.size * 3;
+                // Leave margin for the width of the balloon
+                this.x = (this.size * 2) + Math.random() * (canvas.width - this.size * 4);
+                this.color = BALLOON_COLORS[Math.floor(Math.random() * BALLOON_COLORS.length)];
+            },
+            
+            calculateSpeed() {
+                const baseSpeed = canvas.height * 0.003; 
+                const speedIncrement = score * canvas.height * 0.0006;
+                this.speedY = Math.max(2, baseSpeed + speedIncrement);
+            },
+            
+            hit() {
+                score++;
+                createExplosion(this.x, this.y, this.color);
+                
+                if (Tone.context.state === 'running') {
+                    // Random 8-bit blip frequency
+                    const notes = ["C5", "E5", "G5", "C6"];
+                    const note = notes[Math.floor(Math.random() * notes.length)];
+                    popSynth.triggerAttackRelease(note, "16n");
+                }
+                
+                this.resetPosition();
+                this.calculateSpeed();
+            },
+            
+            // Draw a pixelated 8-bit balloon using rectangles
+            draw(ctx) {
+                const s = this.size;
+                const half = s / 2;
+                
+                ctx.fillStyle = this.color;
+                
+                // Draw a retro "plus" or "diamond" shape for the balloon body
+                // Center block
+                ctx.fillRect(this.x - s, this.y - s, s * 2, s * 2);
+                // Top block
+                ctx.fillRect(this.x - half, this.y - s - half, s, half);
+                // Bottom block
+                ctx.fillRect(this.x - half, this.y + s, s, half);
+                // Left block
+                ctx.fillRect(this.x - s - half, this.y - half, half, s);
+                // Right block
+                ctx.fillRect(this.x + s, this.y - half, half, s);
+                
+                // Draw a blocky string/tail
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(this.x - 2, this.y + s + half, 4, s * 1.5);
+                ctx.fillRect(this.x - 6, this.y + s + half + s * 1.5, 12, 4); // Little knot at the bottom
+            }
+        };
+
+        function initStars() {
+            stars = [];
+            const numStars = Math.floor(window.innerWidth / 20);
+            for (let i = 0; i < numStars; i++) {
+                stars.push({
+                    x: Math.random() * window.innerWidth,
+                    y: Math.random() * window.innerHeight,
+                    size: Math.random() > 0.8 ? 4 : 2, // Blocky stars
+                    speed: Math.random() * 2 + 0.5
+                });
+            }
+        }
+
+        function drawStars(ctx) {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            stars.forEach(s => {
+                s.y -= s.speed; 
+                if (s.y < 0) {
+                    s.y = canvas.height;
+                    s.x = Math.random() * canvas.width;
+                }
+                // Square stars
+                ctx.fillRect(s.x, s.y, s.size, s.size);
+            });
+        }
+
+        function createExplosion(x, y, color) {
+            for (let i = 0; i < 20; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 8 + 2;
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 1,
+                    color: color,
+                    size: Math.random() * 10 + 4 // Chunky particles
+                });
+            }
+        }
+
+        function updateAndDrawParticles(ctx) {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.3; // Gravity
+                p.life -= 0.04; // Fade out
+                
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                    continue;
+                }
+                
+                ctx.fillStyle = p.color;
+                // Fake opacity by shrinking the block size based on life
+                const currentSize = p.size * p.life;
+                ctx.fillRect(p.x - currentSize/2, p.y - currentSize/2, currentSize, currentSize);
+            }
+        }
+
+        function handleInput(clientX, clientY) {
+            if (gameState !== 'playing') return;
+            
+            // Hitbox calculation adjusted for smaller balloons
+            const s = balloon.size;
+            const hitboxLeft = balloon.x - s * 2;
+            const hitboxRight = balloon.x + s * 2;
+            const hitboxTop = balloon.y - s * 2;
+            const hitboxBottom = balloon.y + s * 2.5; // extended for tail
+
+            if (clientX >= hitboxLeft && clientX <= hitboxRight && 
+                clientY >= hitboxTop && clientY <= hitboxBottom) {
+                balloon.hit();
+            }
+        }
+
+        canvas.addEventListener('pointerdown', (e) => {
+            e.preventDefault(); 
+            handleInput(e.clientX, e.clientY);
+        });
+
+        function startGame() {
+            document.getElementById('menu-screen').classList.add('hidden');
+            document.getElementById('game-over-screen').classList.add('hidden');
+            
+            score = 0;
+            particles = [];
+            balloon.init();
+            
+            gameState = 'playing';
+        }
+
+        function endGame() {
+            gameState = 'gameover';
+            
+            if (Tone.context.state === 'running') {
+                overSynth.triggerAttackRelease("A2", "4n");
+                setTimeout(() => overSynth.triggerAttackRelease("E2", "2n"), 250);
+            }
+
+            leaderboard.push(score);
+            leaderboard.sort((a, b) => b - a);
+            if (leaderboard.length > 5) {
+                leaderboard = leaderboard.slice(0, 5); 
+            }
+
+            // Pad score with zeros for retro look
+            const padScore = (num) => num.toString().padStart(4, '0');
+
+            document.getElementById('final-score').innerText = padScore(score);
+            const listEl = document.getElementById('leaderboard-list');
+            listEl.innerHTML = '';
+            
+            const suffixes = ["1ST", "2ND", "3RD", "4TH", "5TH"];
+            leaderboard.forEach((pts, index) => {
+                const li = document.createElement('li');
+                li.className = 'flex justify-between items-center text-green-400';
+                
+                li.innerHTML = `<span>${suffixes[index]}</span> <span class="text-white">.....</span> <span class="text-yellow-400">${padScore(pts)}</span>`;
+                listEl.appendChild(li);
+            });
+
+            document.getElementById('game-over-screen').classList.remove('hidden');
+        }
+
+        function loop() {
+            requestAnimationFrame(loop);
+            
+            // Clear canvas with solid black
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            drawStars(ctx);
+            
+            if (gameState === 'playing') {
+                balloon.y += balloon.speedY;
+                
+                if (balloon.y - (balloon.size * 2) > canvas.height) {
+                    endGame();
+                }
+
+                updateAndDrawParticles(ctx);
+                balloon.draw(ctx);
+
+                // Draw retro HUD Score
+                ctx.fillStyle = '#22c55e'; // Green
+                ctx.font = '16px "Press Start 2P", monospace';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'top';
+                ctx.fillText(`SCORE:${score.toString().padStart(4, '0')}`, 20, 20);
+                
+            } else {
+                updateAndDrawParticles(ctx);
+            }
+        }
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            if(stars.length === 0) initStars();
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+        
+        document.getElementById('start-btn').addEventListener('click', async () => {
+            try { await Tone.start(); } catch(e) {}
+            startGame();
+        });
+
+        document.getElementById('restart-btn').addEventListener('click', startGame);
+
+        requestAnimationFrame(loop);
+    </script>
+</body>
+</html>

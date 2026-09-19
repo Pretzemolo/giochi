@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sala giochi · Giaco&amp;Dario™</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕹️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Nunito:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--notte:#16123A;--notte-2:#221C52;--giallo:#FFD23F;--rosa:#FF5FA2;--menta:#43E6A8;--cielo:#5CC8FF;--carta:#FBF7FF;--grigio:#B9B3DA}
+*{box-sizing:border-box}
+body{margin:0;background:var(--notte);color:var(--carta);font:500 1rem/1.5 Nunito,system-ui,sans-serif}
+a{color:inherit}
+.insegna{padding:clamp(2rem,6vw,4.5rem) 1.25rem 2rem;text-align:center;background:
+ radial-gradient(60% 120% at 50% 0%,rgba(255,95,162,.25),transparent 70%)}
+.insegna h1{margin:0;font:400 clamp(2.2rem,8vw,4.6rem)/1 Bungee,Impact,sans-serif;color:var(--giallo);
+ text-shadow:0 0 18px rgba(255,210,63,.55),4px 4px 0 var(--rosa)}
+.insegna p{margin:.9rem auto 0;max-width:34rem;color:var(--grigio);font-size:1.05rem}
+main{max-width:68rem;margin:0 auto;padding:0 1.25rem 4rem}
+h2{font:400 1.35rem Bungee,Impact,sans-serif;color:var(--menta);margin:2.5rem 0 1rem}
+.griglia{display:grid;grid-template-columns:repeat(auto-fill,minmax(15rem,1fr));gap:1rem;list-style:none;padding:0;margin:0}
+.griglia li{display:flex}
+.gioco{flex:1;position:relative;display:flex;flex-direction:column;gap:.35rem;min-height:9.5rem;padding:1.1rem 1.1rem 1rem;
+ background:var(--notte-2);border-radius:14px;border-top:6px solid var(--c,var(--giallo));text-decoration:none}
+.gioco h3{margin:0;font-size:1.15rem;font-weight:800}
+.gioco p{margin:0;color:var(--grigio);font-size:.95rem;flex:1}
+.gioco .gioca{align-self:flex-start;margin-top:.5rem;padding:.35rem .9rem;border-radius:999px;background:var(--c,var(--giallo));color:var(--notte);font-weight:800;font-size:.9rem}
+.gioco:hover{background:#2A2363}
+.gioco:focus-visible{outline:3px solid var(--carta);outline-offset:3px}
+.nota{color:var(--grigio);font-size:.85rem}
+footer{text-align:center;color:var(--grigio);font-size:.85rem;padding:2rem 1rem 3rem}
+</style>
+</head>
+<body>
+<header class="insegna">
+  <h1>Giaco&amp;Dario™</h1>
+  <p>La sala giochi. Scegli un gioco e premi Gioca: si apre a schermo intero e i progressi restano salvati su questo dispositivo.</p>
+</header>
+<main>
+  <h2>Azione</h2>
+  <ul class="griglia">
+    <li><a class="gioco" style="--c:var(--giallo)" href="giochi/runner-ultimate/"><h3>Stickman Runner 2</h3><p>Salta, chinati e sblocca terreni, colori, cappelli e potenziamenti.</p><span class="gioca">Gioca</span></a></li>
+    <li><a class="gioco" style="--c:var(--giallo)" href="giochi/runner-deluxe/"><h3>Stickman Runner: Deluxe Edition</h3><p>Salta le spine, chinati sotto le palle spinose e sblocca la Stella.</p><span class="gioca">Gioca</span></a></li>
+    <li><a class="gioco" style="--c:var(--rosa)" href="giochi/polpetta-letale/"><h3>Polpetta letale</h3><p>Una polpetta in fuga dalla cucina contro i mirtilli mutanti.</p><span class="gioca">Gioca</span></a></li>
+    <li><a class="gioco" style="--c:var(--rosa)" href="giochi/polpetta-2/"><h3>Polpetta letale 2</h3><p>Ancora più arrabbiata: raccogli il parmigiano e affronta il Capitano Mirtillo.</p><span class="gioca">Gioca</span></a></li>
+    <li><a class="gioco" style="--c:var(--cielo)" href="giochi/ged-3d/"><h3>Giaco&amp;Dario 3D</h3><p>51 avventure in 3D. La modalità a due giocatori funziona solo da PC.</p><span class="gioca">Gioca</span></a></li>
+    <li><a class="gioco" style="--c:var(--giallo)" href="giochi/balloon-blast/"><h3>Balloon Blast</h3><p>Non far cadere il palloncino: la velocità continua a salire.</p><span class="gioca">Gioca</span></a></li>
+  </ul>
+  <h2>Picchiaduro</h2>
+  <ul class="griglia">
+    <li><a class="gioco" style="--c:var(--menta)" href="giochi/settore-9/"><h3>Settore 9 (Street Brawler 2)</h3><p>Kai contro Sen, tre round. Si può giocare anche in due.</p><span class="gioca">Gioca</span></a></li>
+    <li><a class="gioco" style="--c:var(--menta)" href="giochi/street-brawler/"><h3>Street Brawler</h3><p>Combattimento contro il computer, con tutorial per iniziare.</p><span class="gioca">Gioca</span></a></li>
+  </ul>
+  <h2>Sfide e curiosità</h2>
+  <ul class="griglia">
+    <li><a class="gioco" style="--c:var(--cielo)" href="giochi/test-reattivita/"><h3>Test dei riflessi</h3><p>Semaforo e bersaglio mobile: misura quanto sei veloce.</p><span class="gioca">Gioca</span></a></li>
+    <li><a class="gioco" style="--c:var(--rosa)" href="giochi/quanto-sei-unico/"><h3>Quanto sei unico?</h3><p>Scegli le tue caratteristiche e scopri quante persone al mondo ti somigliano.</p><span class="gioca">Gioca</span></a></li>
+    <li><a class="gioco" style="--c:var(--menta)" href="giochi/stimulation-clicker/"><h3>Stimulation Clicker</h3><p>Clicca, compra potenziamenti e fai salire i punti.</p><span class="gioca">Gioca</span></a></li>
+    <li><a class="gioco" style="--c:var(--giallo)" href="https://wordwall.net/it/resource/116994779" rel="noopener"><h3>50 domande di cultura generale</h3><p>Quiz su Wordwall.</p><span class="gioca">Apri il quiz</span></a></li>
+    <li><a class="gioco" style="--c:var(--giallo)" href="https://wordwall.net/it/embed/c6d6d07475724c0388cee1c487f65cf8" rel="noopener"><h3>Quanto ne sai di Giaco&amp;Dario?</h3><p>Quiz su Wordwall.</p><span class="gioca">Apri il quiz</span></a></li>
+  </ul>
+</main>
+<footer>Made with ❤️ by Giaco&amp;Dario™</footer>
+</body>
+</html>
