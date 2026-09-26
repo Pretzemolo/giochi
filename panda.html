@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Panda</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #ffd9e4; --hint: #5a3346; --hint-bg: rgba(255, 244, 248, .7); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #2a1a24; } }
+  :root[data-theme="dark"] { --bg: #2a1a24; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); }
+  canvas {
+    position: fixed; left: 0; top: 0; display: block;
+    image-rendering: pixelated; image-rendering: crisp-edges;
+    cursor: pointer; touch-action: manipulation;
+  }
+  #hint {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    font: 10px/1.6 "Press Start 2P", "Courier New", monospace;
+    color: var(--hint); background: var(--hint-bg);
+    padding: 8px 12px; white-space: nowrap; pointer-events: none;
+    transition: opacity 1.2s ease;
+  }
+  @media (prefers-reduced-motion: reduce) { #hint { transition: none; } }
+</style>
+</head>
+<body>
+<canvas id="c" aria-label="Un panda in pixel art cammina sotto i ciliegi in fiore"></canvas>
+<div id="hint">Clicca per far cadere i petali</div>
+<script>
+(() => {
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const TAU = Math.PI * 2, R = Math.random;
+let W, H, S, GROUND, skyBg, layerBack, layerFront;
+let bamboo = [], tufts = [], petals = [], fallen = [], panda, pandaWalk = [], pandaIdle = [], T = 0;
+
+/* ---------- utility ---------- */
+function mulberry(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const hexCache = {};
+const hex = h => hexCache[h] || (hexCache[h] = (n => [n>>16&255, n>>8&255, n&255])(parseInt(h.slice(1),16)));
+const mix = (a,b,t) => '#' + hex(a).map((v,i)=>Math.round(v+(hex(b)[i]-v)*t).toString(16).padStart(2,'0')).join('');
+const BAYER = [[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]].map(r=>r.map(v=>(v+.5)/16));
+function mk(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');x.imageSmoothingEnabled=false;return [c,x];}
+function grid(w,h){return Array.from({length:h},()=>Array(w).fill(0));}
+function set(G,x,y,v){x=Math.round(x);y=Math.round(y);if(y>=0&&y<G.length&&x>=0&&x<G[0].length)G[y][x]=v;}
+function get(G,x,y){x=Math.round(x);y=Math.round(y);return (y>=0&&y<G.length&&x>=0&&x<G[0].length)?G[y][x]:0;}
+function outline(G,v){const h=G.length,w=G[0].length,add=[];for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(!G[y][x]&&(get(G,x-1,y)||get(G,x+1,y)||get(G,x,y-1)||get(G,x,y+1)))add.push([x,y]);add.forEach(([x,y])=>G[y][x]=v);}
+function toCanvas(G,pal){const h=G.length,w=G[0].length;const [c,x]=mk(w,h);const img=x.createImageData(w,h);
+  for(let y=0;y<h;y++)for(let i=0;i<w;i++){const k=G[y][i];if(!k)continue;const col=hex(pal[k]);const o=(y*w+i)*4;img.data[o]=col[0];img.data[o+1]=col[1];img.data[o+2]=col[2];img.data[o+3]=255;}
+  x.putImageData(img,0,0);return c;}
+const px = (x,y,c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x),Math.round(y),1,1); };
+
+/* ---------- palette ---------- */
+const SKY = ['#ffe6f0','#ffd7e6','#ffc9dc','#f3c6e0','#dfc8e8','#cdcdee','#bcd6f2'];
+const HILL_FAR = '#b9a8d6', HILL_NEAR = '#8f9bcd';
+const GRASS = {l:'#9ad97f', m:'#6fbb5f', d:'#4c9047', k:'#3a7038'};
+const SOIL = {l:'#a07850', m:'#7d5a3c', d:'#5d4530'};
+const TREE = {t:'#7b5741', h:'#9c7154', s:'#523522', a:'#ffd9e8', b:'#ff9ec4', c:'#e06b9e', o:'#a8447a'};
+const BAMBOO = {l:'#a8d96a', m:'#74b33f', d:'#4a7d2c', n:'#3d6624'};
+const PETAL = [['#ffe1ee','#ffaed0'],['#ffd0e4','#ff93bd'],['#ffc0da','#ef7cae']];
+const PP = {W:'#f5f0e6',L:'#fffdf7',S:'#d6cec0',g:'#8d8894',K:'#23212a',d:'#3b3844',o:'#121117',E:'#ffffff',P:'#0e0e14',N:'#1b1a21'};
+
+/* ---------- albero di ciliegio ---------- */
+function cherryTree(r,h){
+  const w=Math.max(18,Math.round(h*1.8)), G=grid(w,h+3), cx=Math.floor(w/2), tips=[];
+  const grow=(x,y,len,ang,th,depth)=>{
+    for(let i=0;i<len;i++){
+      const rr=Math.max(.6,th*(1-i/len*.75));
+      for(let yy=-4;yy<=4;yy++)for(let xx=-4;xx<=4;xx++)if(xx*xx+yy*yy<=rr*rr)set(G,x+xx,y+yy,'t');
+      x+=Math.cos(ang);y-=Math.sin(ang);ang+=(r()-.5)*.3;
+      if(depth<3&&i>len*.3&&r()<.2)grow(x,y,len*(.45+r()*.3),ang+(r()<.5?-1:1)*(.5+r()*.45),th*.62,depth+1);
+    }
+    tips.push([x,y,th]);
+  };
+  grow(cx,h+1,h*.78,Math.PI/2,h*.075+1.2,0);
+  for(let y=0;y<G.length;y++)for(let x=0;x<w;x++)if(G[y][x]==='t'){if(!get(G,x-1,y))G[y][x]='h';else if(!get(G,x+1,y))G[y][x]='s';}
+  const noise=(a,b2)=>{const n=Math.sin(a*12.9898+b2*78.233)*43758.5453;return n-Math.floor(n);};
+  tips.forEach(([x,y,th])=>{const rad=2.2+r()*2+th*.6;
+    for(let yy=-rad-1;yy<=rad+1;yy++)for(let xx=-rad-1;xx<=rad+1;xx++){
+      const d=Math.hypot(xx,yy);if(d>rad+(r()-.5)*1.2)continue;
+      const gx=Math.round(x+xx),gy=Math.round(y+yy),n=noise(gx,gy);
+      if(n<.07&&d>rad*.5)continue;                       // qualche vuoto fra i fiori
+      const t=.5-(xx+yy)/(2.4*rad)+(n-.5)*.55;
+      set(G,gx,gy,t>.62?'a':t<.3?'c':'b');}});
+  return G;
+}
+function bambooStalk(r,h){return {h,seg:4+Math.floor(r()*3),p:r()*TAU,lean:(r()-.5)*.5};}
+
+/* ---------- panda ---------- */
+const PW=38, PH=24;
+function buildPanda(p,idle,headDy){
+  const G=grid(PW,PH);
+  const blob=(cx,cy,r,c,only)=>{const k=Math.ceil(r);for(let yy=-k;yy<=k;yy++)for(let xx=-k;xx<=k;xx++){
+    if(xx*xx+yy*yy>r*r)continue;if(only&&get(G,cx+xx,cy+yy))continue;set(G,cx+xx,cy+yy,c);}};
+  const taper=(x0,y0,x1,y1,r0,r1,c,only)=>{const st=Math.max(6,Math.round(Math.hypot(x1-x0,y1-y0)*2));
+    for(let i=0;i<=st;i++){const t=i/st;blob(x0+(x1-x0)*t,y0+(y1-y0)*t,r0+(r1-r0)*t,c,only);}};
+  // zampa corta a due segmenti, con la piega del ginocchio
+  const leg=(hx,hy,ph,c,e)=>{
+    const a1=Math.PI/2+(idle?.03:.38*Math.sin(ph)), a2=Math.PI/2+(idle?.02:.2*Math.sin(ph+1.2));
+    const kx=hx+Math.cos(a1)*2.7, ky=hy+Math.sin(a1)*2.7;
+    const fx2=kx+Math.cos(a2)*2.7, fy2=ky+Math.sin(a2)*2.7;
+    const only=(c==='o');
+    taper(hx,hy,kx,ky,2.2+e,1.8+e,c,only);
+    taper(kx,ky,fx2,fy2,1.8+e,1.5+e,c,only);
+    blob(fx2+.6,fy2,1.7+e,c,only);
+  };
+  const hy0=8.6+headDy;
+  // arti del lato lontano
+  leg(18,15.5,p+Math.PI,'d',0); leg(7,15.5,p,'d',0);
+  // corpo
+  const bx=15,by=12,rx=10,ry=6.6;
+  for(let y=0;y<PH;y++)for(let x=0;x<PW;x++){const dx=(x+.5-bx)/rx,dy=(y+.5-by)/ry;
+    if(dx*dx+dy*dy<=1)G[y][x]=dy<-.55?'L':(dy>.4?'S':'W');}
+  blob(4.6,10.5,1.9,'W');
+  // fascia nera delle spalle
+  for(let y=0;y<PH;y++)for(let x=0;x<PW;x++){const dx=(x+.5-bx)/rx,dy=(y+.5-by)/ry;
+    if(dx*dx+dy*dy<=1&&x>=20&&x<=23)G[y][x]='K';}
+  // testa e muso
+  for(let y=0;y<PH;y++)for(let x=0;x<PW;x++){const dx=(x+.5-27.2)/6,dy=(y+.5-hy0)/5.4;
+    if(dx*dx+dy*dy<=1)G[y][x]=dy<-.5?'L':'W';}
+  blob(31.6,hy0+2.4,2.4,'W');
+  blob(28.6,hy0-5.4,2.3,'K');
+  blob(23.6,hy0-4.8,1.9,'d');
+  // macchie oculari inclinate
+  const patch=(cx,cy,r1,r2,rot,c)=>{const co=Math.cos(rot),si=Math.sin(rot);
+    for(let y=0;y<PH;y++)for(let x=0;x<PW;x++){const dx=x+.5-cx,dy=y+.5-cy,u=(dx*co+dy*si)/r1,v=(-dx*si+dy*co)/r2;
+      if(u*u+v*v<=1)G[y][x]=c;}};
+  patch(24.6,hy0+1.1,1.6,1.2,-.5,'d');
+  patch(29,hy0+.6,1.9,1.45,-.45,'K');
+  set(G,29,Math.round(hy0+.1),'E');set(G,29,Math.round(hy0+1.1),'P');
+  // naso e bocca
+  blob(32.8,hy0+1.6,1,'N');
+  set(G,31,Math.round(hy0+4),'K');set(G,32,Math.round(hy0+3.8),'K');
+  if(idle&&headDy>0)set(G,31,Math.round(hy0+4.4),'K');
+  // arti del lato vicino, con bordo
+  leg(21.5,15.5,p,'o',1); leg(21.5,15.5,p,'K',0);
+  leg(10.5,15.5,p+Math.PI,'o',1); leg(10.5,15.5,p+Math.PI,'K',0);
+  // sfumatura del pelo fra bianco e nero
+  for(let y=0;y<PH;y++)for(let x=0;x<PW;x++){const v=G[y][x];
+    if((v==='W'||v==='S'||v==='L')&&(get(G,x+1,y)==='K'||get(G,x-1,y)==='K'||get(G,x,y+1)==='K'||get(G,x,y-1)==='K')&&((x*2+y)%3===0))G[y][x]='g';}
+  outline(G,'o');
+  return toCanvas(G,PP);
+}
+
+/* ---------- costruzione scena ---------- */
+function buildScene(){
+  const rs=mulberry(19840311);
+  GROUND=H-14;
+
+  // cielo
+  let sx;[skyBg,sx]=mk(W,H);const img=sx.createImageData(W,H),cols=SKY.map(hex);
+  for(let y=0;y<H;y++){const t=Math.min(1,y/(H-6))*(cols.length-1),i=Math.floor(t),f=t-i;
+    for(let x=0;x<W;x++){const c=cols[Math.min(cols.length-1,f>BAYER[y&3][x&3]?i+1:i)],o=(y*W+x)*4;
+      img.data[o]=c[0];img.data[o+1]=c[1];img.data[o+2]=c[2];img.data[o+3]=255;}}
+  sx.putImageData(img,0,0);
+  // sole pallido
+  const sunX=Math.round(W*.18),sunY=Math.round(H*.16);
+  sx.globalAlpha=.55;sx.fillStyle='#fffdf2';
+  for(let y=-9;y<=9;y++)for(let x=-9;x<=9;x++)if(x*x+y*y<=81)sx.fillRect(sunX+x,sunY+y,1,1);
+  sx.globalAlpha=.18;
+  for(let y=-13;y<=13;y++)for(let x=-13;x<=13;x++){const d=x*x+y*y;if(d>81&&d<=169&&BAYER[(y+13)&3][(x+13)&3]<.5)sx.fillRect(sunX+x,sunY+y,1,1);}
+  sx.globalAlpha=1;
+
+  // colline
+  let bx;[layerBack,bx]=mk(W,H);
+  const hill=(color,amp,base,fr)=>{for(let x=0;x<W;x++){const top=Math.round(base+Math.sin(x*fr)*amp+Math.sin(x*fr*2.3+1)*amp*.4);
+    for(let y=top;y<GROUND+2;y++){const c=(y-top<2&&BAYER[y&3][x&3]>.5)?mix(color,'#ffffff',.25):color;bx.fillStyle=c;bx.fillRect(x,y,1,1);}}};
+  hill(HILL_FAR,4,GROUND-22,.035);
+  hill(HILL_NEAR,3,GROUND-13,.05);
+  // alberi sullo sfondo
+  for(let x=-6;x<W;x+=26+rs()*30){const G=cherryTree(rs,14+Math.round(rs()*8));
+    const pal={};for(const k in TREE)pal[k]=mix(TREE[k],HILL_NEAR,.45);
+    const c=toCanvas(G,pal);bx.drawImage(c,Math.round(x),GROUND-2-(c.height-1));}
+
+  // terreno e alberi in primo piano
+  let fx;[layerFront,fx]=mk(W,H);
+  const gp=Object.fromEntries(Object.entries(GRASS).map(([k,v])=>[k,hex(v)])),sp=Object.fromEntries(Object.entries(SOIL).map(([k,v])=>[k,hex(v)]));
+  const si=fx.createImageData(W,H);
+  for(let x=0;x<W;x++){const gy=GROUND+Math.round(Math.sin(x*.08)*1.2);
+    for(let y=gy;y<H;y++){const d=y-gy;let c,pal=gp;
+      if(d===0)c='l';else if(d<3)c=BAYER[y&3][x&3]>.45?'l':'m';
+      else if(d<6)c=BAYER[y&3][x&3]<.5?'m':'d';
+      else if(d<8){c=BAYER[y&3][x&3]<.5?'d':'k';}
+      else {pal=sp;c=BAYER[y&3][x&3]<(d-8)/6?'d':'m';}
+      const n=rs();if(pal===gp&&n<.05)c='k';else if(pal===sp&&n<.05)c='l';
+      const col=pal[c],o=(y*W+x)*4;si.data[o]=col[0];si.data[o+1]=col[1];si.data[o+2]=col[2];si.data[o+3]=255;}}
+  fx.putImageData(si,0,0);
+  // sassi
+  for(let i=0;i<Math.max(2,W/80);i++){const x=Math.floor(rs()*W),y=GROUND+4+Math.floor(rs()*5),w2=3+Math.floor(rs()*3);
+    for(let j=0;j<w2;j++){fx.fillStyle=j===0?'#b9b2ab':'#8e8781';fx.fillRect(x+j,y,1,1);fx.fillStyle='#6d6660';fx.fillRect(x+j,y+1,1,1);}}
+  // grandi ciliegi
+  const trunks=[];
+  for(let x=-10;x<W;x+=40+rs()*38){const h=26+Math.round(rs()*16),G=cherryTree(rs,h),c=toCanvas(G,TREE);
+    const yy=GROUND+2+Math.floor(rs()*3)-(c.height-1);fx.drawImage(c,Math.round(x),yy);
+    trunks.push({x:Math.round(x)+Math.floor(c.width/2),top:yy});}
+  window.__trunks=trunks;
+
+  const tintPal=(c,t)=>({l:mix(BAMBOO.l,c,t),m:mix(BAMBOO.m,c,t),d:mix(BAMBOO.d,c,t),n:mix(BAMBOO.n,c,t)});
+  const stalk=z=>{const b=bambooStalk(rs,(z===2?32:z===1?24:17)+Math.floor(rs()*(z===2?20:15)));
+    b.z=z;b.w=z===2?3:2;b.x=Math.floor(rs()*W);
+    b.base=GROUND+(z===2?8:z===1?2:0)+Math.floor(rs()*4);
+    b.pal=z===0?tintPal(HILL_NEAR,.5):z===1?BAMBOO:tintPal('#10300f',.3);
+    return b;};
+  bamboo=[...Array.from({length:Math.max(8,Math.round(W/7))},()=>stalk(0)),
+          ...Array.from({length:Math.max(5,Math.round(W/14))},()=>stalk(1)),
+          ...Array.from({length:Math.max(2,Math.round(W/60))},()=>stalk(2))];
+  tufts=Array.from({length:Math.max(5,Math.round(W/12))},()=>({x:Math.floor(rs()*W),base:GROUND+2+Math.floor(rs()*6),h:2+Math.floor(rs()*3),p:rs()*TAU,
+    flower:rs()<.25?['#fff3a8','#ffd166','#ff8fb0','#ffffff'][Math.floor(rs()*4)]:null}));
+
+  petals=[];fallen=[];
+  panda={x:W*.3,dir:1,phase:0,idle:0,next:2+R()*3,bob:0};
+}
+
+function resize(){
+  const vw=Math.max(window.innerWidth||0,document.documentElement.clientWidth||0,(document.body&&document.body.clientWidth)||0);
+  const vh=Math.max(window.innerHeight||0,document.documentElement.clientHeight||0,(document.body&&document.body.clientHeight)||0);
+  // dentro un iframe la pagina puo' partire senza dimensioni: si riprova finche' non ce l'ha
+  if(vw<40||vh<40){setTimeout(resize,100);return;}
+  const s2=Math.max(2,Math.round(Math.min(vw,vh)/110));
+  const w2=Math.ceil(vw/s2), h2=Math.ceil(vh/s2);
+  if(w2===W&&h2===H&&s2===S)return;
+  S=s2;W=w2;H=h2;
+  cv.width=W;cv.height=H;cv.style.width=(W*S)+'px';cv.style.height=(H*S)+'px';
+  ctx.imageSmoothingEnabled=false;
+  buildScene();
+}
+
+/* ---------- petali ---------- */
+const PETAL_FRAMES=[[[1,0],[0,1],[1,1],[2,1]],[[1,0],[1,1],[1,2]],[[0,1],[1,1],[2,1]],[[1,0],[1,1],[2,1]]];
+function petal(x,y,vy){const c=PETAL[Math.floor(R()*PETAL.length)];
+  petals.push({x,y,vy:vy!==undefined?vy:8+R()*14,vx:(R()-.5)*8,c,p:R()*TAU,sp:.6+R()*1.4});}
+function drawPetal(p){const f=PETAL_FRAMES[Math.floor((T*6*p.sp+p.p)%PETAL_FRAMES.length)];
+  f.forEach(([dx,dy],i)=>px(p.x+dx,p.y+dy,i===0?p.c[0]:p.c[1]));}
+
+/* ---------- aggiornamento ---------- */
+function update(dt){
+  T+=dt;
+  // panda
+  if(panda.idle>0){panda.idle-=dt;panda.bob=Math.floor(T*4)%2;}
+  else{
+    panda.phase+=dt*5.2;panda.bob=0;
+    panda.x+=panda.dir*13*dt;
+    if(panda.dir>0&&panda.x>W-PW-2)panda.dir=-1;
+    if(panda.dir<0&&panda.x<2)panda.dir=1;
+    panda.next-=dt;
+    if(panda.next<0){panda.idle=1.6+R()*2.4;panda.next=3+R()*4;if(R()<.35)panda.dir*=-1;}
+  }
+  // petali ambientali
+  if(R()<dt*2.2&&petals.length<70)petal(R()*W,-4);
+  petals.forEach(p=>{p.y+=p.vy*dt;p.x+=(p.vx+Math.sin(T*1.6+p.p)*10)*dt;});
+  const gy=GROUND+1;
+  petals=petals.filter(p=>{
+    if(p.y>=gy+R()*6){fallen.push({x:Math.round(p.x),y:Math.round(Math.min(p.y,GROUND+7)),c:p.c,life:6+R()*8});return false;}
+    return p.x>-8&&p.x<W+8;});
+  fallen.forEach(f=>f.life-=dt);
+  if(fallen.length>260)fallen.splice(0,fallen.length-260);
+  fallen=fallen.filter(f=>f.life>0);
+}
+
+/* ---------- disegno ---------- */
+function drawBamboo(z){
+  bamboo.forEach(b=>{
+    if(b.z!==z)return;
+    const P=b.pal;
+    for(let i=0;i<b.h;i++){
+      const k=i/b.h,off=Math.round((Math.sin(T*(1.1-b.z*.15)+b.p+i*.16)*k*2.4)+b.lean*i*.35),x=b.x+off,y=b.base-i;
+      const node=i%b.seg===0;
+      px(x,y,node?P.n:P.l);
+      for(let j=1;j<b.w;j++)px(x+j,y,node?P.n:(j===b.w-1?P.d:P.m));
+      if(i>b.h*.4&&i%4===1){const s2=i%8<4?-1:1,len=b.z===2?5:3;
+        for(let j=1;j<=len;j++)px(x+(s2>0?b.w-1+j:-j),y-Math.round(j*.7),j===len?P.l:P.m);}
+    }
+    px(b.x+Math.round(Math.sin(T*(1.1-b.z*.15)+b.p+b.h*.16)*2.4+b.lean*b.h*.35),b.base-b.h,P.l);
+  });
+}
+function drawTufts(){
+  tufts.forEach(t=>{const sw=Math.sin(T*1.4+t.p)*1.2;
+    for(let i=0;i<t.h;i++){px(t.x+Math.round(sw*i/t.h),t.base-i,i===t.h-1?GRASS.l:GRASS.m);
+      px(t.x+1+Math.round(-sw*i/t.h),t.base-i,GRASS.d);}
+    if(t.flower)px(t.x+Math.round(sw),t.base-t.h,t.flower);});
+}
+function draw(){
+  ctx.drawImage(skyBg,0,0);
+  ctx.drawImage(layerBack,0,0);
+  drawBamboo(0);
+  ctx.drawImage(layerFront,0,0);
+  drawBamboo(1);
+  drawTufts();
+  fallen.forEach(f=>{if(f.life>1.2||Math.floor(T*6)%2)px(f.x,f.y,f.c[1]);});
+  // panda
+  const bob=panda.idle>0?0:(Math.sin(panda.phase*2)>.35?1:0);
+  const X=Math.round(panda.x),Y=GROUND+3-PH+bob;
+  const frame=panda.idle>0?pandaIdle[panda.bob]:pandaWalk[Math.floor((((panda.phase%TAU)+TAU)%TAU)/TAU*8)%8];
+  ctx.globalAlpha=.18;ctx.fillStyle='#3a7038';ctx.fillRect(X+6,GROUND+3,24,1);ctx.globalAlpha=1;
+  if(panda.dir<0){ctx.save();ctx.translate(X+PW,Y);ctx.scale(-1,1);ctx.drawImage(frame,0,0);ctx.restore();}
+  else ctx.drawImage(frame,X,Y);
+  drawBamboo(2);
+  petals.forEach(drawPetal);
+}
+
+let last=performance.now();
+function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;update(dt);draw();requestAnimationFrame(loop);}
+
+cv.addEventListener('pointerdown',e=>{
+  const x=e.clientX/S,y=e.clientY/S;
+  for(let i=0;i<22;i++)petal(x+(R()-.5)*26,y-R()*18,4+R()*16);
+  // scrollata dell'albero più vicino: qualche petalo cade anche dalla chioma
+  const tr=(window.__trunks||[]).slice().sort((a,b)=>Math.abs(a.x-x)-Math.abs(b.x-x))[0];
+  if(tr)for(let i=0;i<10;i++)petal(tr.x+(R()-.5)*30,tr.top+R()*14,6+R()*10);
+});
+let rt;const rilancia=()=>{clearTimeout(rt);rt=setTimeout(resize,120);};
+addEventListener('resize',rilancia);addEventListener('load',rilancia);
+if(window.ResizeObserver)new ResizeObserver(rilancia).observe(document.documentElement);
+pandaWalk=Array.from({length:8},(_,k)=>buildPanda(k/8*TAU,false,0));
+pandaIdle=[buildPanda(0,true,0),buildPanda(0,true,1)];
+resize();requestAnimationFrame(loop);
+setTimeout(()=>{document.getElementById('hint').style.opacity='0';},5000);
+})();
+</script>
+</body>
+</html>
