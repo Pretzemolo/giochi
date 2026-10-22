@@ -9,7 +9,7 @@ index.html                 pagina della sala giochi (elenco di tutti i giochi)
 giochi/<nome>/index.html   un gioco per cartella, file unico e autonomo
 ```
 
-Giochi: `runner-ultimate` (Stickman Runner 2), `runner-deluxe`, `polpetta-letale`, `polpetta-2`, `ged-3d`, `balloon-blast`, `settore-9`, `street-brawler`, `test-reattivita`, `quanto-sei-unico`, `stimulation-clicker`, più `orologio` (il widget con ora e data dell'intestazione).
+Giochi: `runner-ultimate` (Stickman Runner 2), `runner-deluxe`, `polpetta-letale`, `polpetta-2`, `ged-3d`, `ged-3d-madness` (Giaco & Dario 3D Madness, il sequel), `balloon-blast`, `settore-9`, `street-brawler`, `test-reattivita`, `quanto-sei-unico`, `stimulation-clicker`, più `orologio` (il widget con ora e data dell'intestazione).
 I due quiz restano su Wordwall.
 
 ## Pubblicare su GitHub Pages (una volta sola)
@@ -37,6 +37,11 @@ In alternativa si può mettere in Sites un solo link alla sala giochi (`https://
 - **Test dei riflessi:** la libreria di icone Lucide era `@latest` (poteva cambiare da sola e rompere il gioco); ora la versione è fissata.
 
 Il resto del codice dei giochi è invariato.
+
+## Giaco & Dario 3D Madness
+
+Il sequel di Giaco&Dario 3D, in `giochi/ged-3d-madness/`. File unico, usa solo Three.js r128 da cdnjs e i font Google; nessun servizio esterno.
+I salvataggi (monete, avventure sbloccate, outfit) stanno nel browser con la chiave `giacodario-3d-madness`, separati da quelli del primo gioco.
 
 ## Limiti da conoscere
 
