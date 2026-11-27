@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calendario dell'Avvento – Giaco&amp;Dario™</title>
+<style>
+  :root{
+    --bg1:#0b1a3a; --bg2:#1d3b6e; --rosso:#d7263d; --verde:#1b998b;
+    --oro:#f4c95d; --bianco:#fdfdfd; --porta:#22447a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:"Trebuchet MS",system-ui,sans-serif;
+    background:linear-gradient(180deg,var(--bg1),var(--bg2));
+    color:var(--bianco); min-height:100vh; overflow-x:hidden;
+  }
+  #neve{position:fixed;inset:0;pointer-events:none;z-index:0}
+  header{position:relative;z-index:1;text-align:center;padding:24px 12px 8px}
+  h1{font-size:clamp(1.6rem,5vw,2.8rem);letter-spacing:1px;text-shadow:0 3px 0 var(--rosso)}
+  h1 span{color:var(--oro)}
+  #stato{margin-top:8px;font-size:1rem;opacity:.9}
+  #admin{display:none;margin:8px auto 0;background:var(--rosso);padding:4px 10px;border-radius:12px;font-size:.8rem;width:max-content}
+  main{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:16px;
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:14px}
+  .porta{
+    aspect-ratio:1/1; perspective:600px; cursor:pointer; position:relative;
+    border-radius:12px; background:var(--oro);
+  }
+  .anta{
+    position:absolute;inset:0;border-radius:12px;display:flex;align-items:center;justify-content:center;
+    font-size:2.2rem;font-weight:bold;transform-origin:left center;transition:transform .7s ease;
+    border:3px dashed rgba(255,255,255,.35);box-shadow:0 6px 0 rgba(0,0,0,.35);
+  }
+  .porta:nth-child(4n+1) .anta{background:var(--rosso)}
+  .porta:nth-child(4n+2) .anta{background:var(--verde)}
+  .porta:nth-child(4n+3) .anta{background:var(--porta)}
+  .porta:nth-child(4n+4) .anta{background:#7b2d8e}
+  .porta.grande{grid-column:span 2;grid-row:span 2;aspect-ratio:auto}
+  .porta.grande .anta{font-size:4rem}
+  .porta.grande{overflow:hidden}
+  .porta .dentro{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:2.6rem;border-radius:12px}
+  .porta.aperta .anta{transform:rotateY(-105deg)}
+  .porta.chiusa .anta::after{content:"🔒";position:absolute;bottom:6px;right:8px;font-size:1rem}
+  .porta.oggi .anta{animation:pulsa 1.4s infinite}
+  @keyframes pulsa{50%{box-shadow:0 0 22px 6px var(--oro)}}
+  .trema{animation:trema .4s}
+  @keyframes trema{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+  #finestra{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:10;padding:16px}
+  #finestra.vis{display:flex}
+  .card{background:var(--bianco);color:#1a1a1a;border-radius:18px;max-width:460px;width:100%;padding:24px;text-align:center;
+    border-top:10px solid var(--rosso);animation:entra .35s ease}
+  @keyframes entra{from{transform:scale(.6);opacity:0}}
+  .card .giorno{font-size:.9rem;color:#777}
+  .card .icona{font-size:3.4rem;margin:6px 0}
+  .card .tipo{display:inline-block;background:var(--verde);color:#fff;border-radius:10px;padding:3px 10px;font-size:.8rem;margin-bottom:10px}
+  .card p{font-size:1.15rem;line-height:1.45}
+  .card .risposta{margin-top:12px;font-weight:bold;color:var(--rosso);display:none}
+  .card button{margin-top:16px;border:0;border-radius:10px;padding:10px 18px;font-size:1rem;cursor:pointer;font-weight:bold}
+  .btn-svela{background:var(--oro);margin-right:6px}
+  .btn-chiudi{background:var(--porta);color:#fff}
+  #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--rosso);padding:10px 16px;border-radius:12px;
+    display:none;z-index:20;font-weight:bold;text-align:center}
+  #codice{display:flex;flex-wrap:wrap;justify-content:center;gap:4px;margin:14px auto 0;max-width:640px}
+  #codice span{width:22px;height:28px;border-radius:5px;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;
+    font-weight:bold;font-family:monospace;font-size:1rem;color:var(--oro)}
+  #codice span.ok{background:rgba(244,201,93,.25);box-shadow:0 0 6px var(--oro)}
+  .lettera{margin-top:14px;background:#0b1a3a;color:var(--oro);border-radius:10px;padding:8px;font-family:monospace;font-size:1.1rem}
+  .lettera b{font-size:1.6rem}
+  #c-input{display:none;margin-top:14px}
+  #c-input input{width:100%;padding:10px;font-size:1.1rem;border-radius:10px;border:2px solid var(--porta);text-transform:uppercase;text-align:center;font-family:monospace}
+  #c-input .msg{margin-top:8px;font-weight:bold}
+  footer{position:relative;z-index:1;text-align:center;padding:20px;font-size:.85rem;opacity:.7}
+</style>
+</head>
+<body>
+<canvas id="neve"></canvas>
+
+<header>
+  <h1>🎄 Calendario dell'Avvento <span>Giaco&amp;Dario™</span></h1>
+  <div id="stato"></div>
+  <div id="codice"></div>
+  <div id="admin">MODALITÀ ADMIN – tutte le porte sbloccate</div>
+</header>
+
+<main id="griglia"></main>
+
+<div id="finestra">
+  <div class="card">
+    <div class="giorno" id="c-giorno"></div>
+    <div class="icona" id="c-icona"></div>
+    <div class="tipo" id="c-tipo"></div>
+    <p id="c-testo"></p>
+    <div class="risposta" id="c-risposta"></div>
+    <div class="lettera" id="c-lettera"></div>
+    <div id="c-input"><input id="c-campo" placeholder="SCRIVI IL CODICE" autocomplete="off"><button class="btn-svela" id="c-prova">Sblocca</button><div class="msg" id="c-msg"></div></div>
+    <div>
+      <button class="btn-svela" id="c-svela">Mostra la risposta</button>
+      <button class="btn-chiudi" id="c-chiudi">Chiudi</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<footer>Una porta al giorno, niente sbirciate! 😉</footer>
+
+<script>
+/* ============================================================
+   CONTENUTI: modifica qui testi, icone e risposte.
+   risposta: facoltativa (compare il pulsante "Mostra la risposta")
+   Ogni porta 1-23 contiene una lettera del CODICE SEGRETO (in ordine di giorno).
+   ============================================================ */
+const CODICE = "BUONNATALEDAGIACOEDARIO";   // 23 lettere = porte 1-23
+const CONTENUTI = {
+  1:{icona:"📼",tipo:"Fatto assurdo",testo:"Il primissimo video caricato su YouTube, nel 2005, si intitola \"Me at the zoo\" e dura solo 19 secondi."},
+  2:{icona:"👅",tipo:"Sfida",testo:"Di' \"Trentatré trentini entrarono a Trento tutti e trentatré trotterellando\" 5 volte di fila, veloce, senza sbagliare."},
+  3:{icona:"⚛️",tipo:"Fatto assurdo",testo:"Gli atomi sono quasi tutti vuoti: se togliessi lo spazio vuoto da tutti gli esseri umani della Terra, staremmo tutti dentro una zolletta di zucchero."},
+  4:{icona:"⛏️",tipo:"Fatto assurdo",testo:"Minecraft è il videogioco più venduto della storia: oltre 300 milioni di copie."},
+  5:{icona:"🦈",tipo:"Fatto assurdo",testo:"Gli squali esistono da prima degli alberi. Sì, prima delle foreste c'erano già loro."},
+  6:{icona:"🦶",tipo:"Sfida",testo:"Da seduto, fai girare il piede destro in senso orario. Ora, senza fermarti, disegna un 6 in aria con la mano destra. Cosa fa il piede? 😈"},
+  7:{icona:"🔴",tipo:"Fatto assurdo",testo:"Su Marte il cielo di giorno è color ruggine… ma i tramonti sono blu."},
+  8:{icona:"🐋",tipo:"Fatto assurdo",testo:"Il cuore di una balenottera azzurra pesa circa 180 kg: più di due persone adulte messe insieme."},
+  9:{icona:"⚡",tipo:"Sfida",testo:"Vai nella sezione Giochi, fai il Test dei riflessi e sfida un amico: chi perde fa 10 flessioni."},
+  10:{icona:"👾",tipo:"Fatto assurdo",testo:"Pac-Man in Giappone si chiamava Puck-Man. Il nome è stato cambiato in America per paura che qualcuno grattasse via un pezzo della P dai cabinati…"},
+  11:{icona:"🌩️",tipo:"Fatto assurdo",testo:"Un fulmine è circa 5 volte più caldo della superficie del Sole."},
+  12:{icona:"🎲",tipo:"Enigma",testo:"Un uomo spinge la sua auto fino a un hotel e capisce subito di essere in bancarotta. Perché?",risposta:"Sta giocando a Monopoli!"},
+  13:{icona:"🫃",tipo:"Fatto assurdo",testo:"Il tuo stomaco rinnova il suo rivestimento ogni pochi giorni. Se non lo facesse, finirebbe per digerire sé stesso."},
+  14:{icona:"🧑‍🚀",tipo:"Fatto assurdo",testo:"Nello spazio gli astronauti diventano più alti, fino a circa 5 cm, perché la colonna vertebrale si allunga senza gravità."},
+  15:{icona:"🔤",tipo:"Sfida",testo:"Recita l'alfabeto al contrario, dalla Z alla A, in meno di 20 secondi. Cronometro alla mano!"},
+  16:{icona:"🗼",tipo:"Fatto assurdo",testo:"D'estate la Torre Eiffel è circa 15 cm più alta che d'inverno: il ferro col caldo si dilata."},
+  17:{icona:"🤫",tipo:"Enigma",testo:"Basta dire il suo nome per romperlo. Che cos'è?",risposta:"Il silenzio"},
+  18:{icona:"♟️",tipo:"Fatto assurdo",testo:"Nel 1997 un computer, Deep Blue, ha battuto per la prima volta il campione del mondo di scacchi Garry Kasparov."},
+  19:{icona:"🌟",tipo:"Fatto assurdo",testo:"Un cucchiaino di materia di una stella di neutroni peserebbe miliardi di tonnellate."},
+  20:{icona:"😐",tipo:"Sfida",testo:"Sfida di famiglia: guardatevi negli occhi a due a due. Chi ride per primo perde. Il campione sfida il prossimo."},
+  21:{icona:"🍌",tipo:"Fatto assurdo",testo:"Le banane sono leggermente radioattive, per via del potassio che contengono. Tranquillo: dovresti mangiarne milioni per farti male."},
+  22:{icona:"🐱",tipo:"Fatto assurdo",testo:"I gatti non sentono il sapore dolce: non hanno i recettori per riconoscerlo."},
+  23:{icona:"🧠",tipo:"Enigma",testo:"Il papà di Marco ha cinque figli: Nana, Nene, Nini, Nono… Come si chiama il quinto?",risposta:"Marco!"},
+  24:{icona:"🔐",tipo:"Finale segreto",testo:"Hai raccolto tutte le lettere? Scrivi qui sotto il codice segreto per sbloccare il finale."}
+};
+const FINALE = "🎉 CODICE ESATTO! Sei ufficialmente un Agente Speciale di Giaco&Dario™. Fai uno screenshot di questa schermata e mandalo sul canale WhatsApp per entrare nella Hall of Fame. Buon Natale! 🎄";
+
+/* Ordine sparso delle porte nella griglia (la 24 è grande) */
+const ORDINE = [7,15,3,20,11,1,18,9,24,13,5,22,2,16,10,19,4,12,21,6,14,23,8,17];
+
+/* ---------- logica ---------- */
+const params = new URLSearchParams(location.search);
+const ADMIN = params.get("admin") === "1";
+const CHIAVE = "gd_avvento_2026";
+
+function oggi(){
+  const d = new Date();
+  return {anno:d.getFullYear(), mese:d.getMonth()+1, giorno:d.getDate()};
+}
+function giornoSbloccato(){
+  if (ADMIN) return 24;
+  const t = oggi();
+  if (t.mese === 12) return Math.min(t.giorno, 24);
+  if (t.mese === 1 && t.anno > 2026) return 24;   // a gennaio tutto aperto
+  return 0;                                        // prima di dicembre
+}
+function leggiAperte(){
+  try { return JSON.parse(localStorage.getItem(CHIAVE)) || []; } catch(e){ return []; }
+}
+function salvaAperte(lista){
+  try { localStorage.setItem(CHIAVE, JSON.stringify(lista)); } catch(e){}
+}
+
+let aperte = leggiAperte();
+const sbloccato = giornoSbloccato();
+const griglia = document.getElementById("griglia");
+
+if (ADMIN) document.getElementById("admin").style.display = "block";
+
+function aggiornaStato(){
+  const s = document.getElementById("stato");
+  const t = oggi();
+  if (sbloccato === 0){
+    const inizio = new Date(t.anno, 11, 1);
+    const giorni = Math.ceil((inizio - new Date()) / 86400000);
+    s.textContent = "Il calendario si apre il 1° dicembre: mancano " + giorni + " giorni! ⏳";
+  } else {
+    s.textContent = "Porte aperte: " + aperte.length + " / 24";
+  }
+}
+
+ORDINE.forEach(n => {
+  const p = document.createElement("div");
+  p.className = "porta" + (n === 24 ? " grande" : "");
+  p.dataset.n = n;
+  p.innerHTML = '<div class="dentro">' + CONTENUTI[n].icona + '</div><div class="anta">' + n + '</div>';
+  if (n > sbloccato) p.classList.add("chiusa");
+  if (n === sbloccato && !ADMIN && !aperte.includes(n)) p.classList.add("oggi");
+  if (aperte.includes(n) && n <= sbloccato) p.classList.add("aperta");
+  p.addEventListener("click", () => apri(p, n));
+  griglia.appendChild(p);
+});
+aggiornaStato();
+
+function disegnaCodice(){
+  const box = document.getElementById("codice");
+  box.innerHTML = "";
+  for (let i = 1; i <= 23; i++){
+    const s = document.createElement("span");
+    const vista = aperte.includes(i) && i <= sbloccato;
+    s.textContent = vista ? CODICE[i-1] : "?";
+    if (vista) s.classList.add("ok");
+    box.appendChild(s);
+  }
+}
+disegnaCodice();
+
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.style.display = "block";
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.style.display = "none", 2200);
+}
+
+function apri(p, n){
+  if (n > sbloccato){
+    p.classList.remove("trema"); void p.offsetWidth; p.classList.add("trema");
+    if (sbloccato === 0) toast("Pazienza! Si comincia il 1° dicembre 🎄");
+    else {
+      const mancano = n - sbloccato;
+      toast("Ehi, niente sbirciate! Mancano " + mancano + (mancano === 1 ? " giorno" : " giorni") + " 😏");
+    }
+    return;
+  }
+  p.classList.add("aperta"); p.classList.remove("oggi");
+  if (!aperte.includes(n)){ aperte.push(n); salvaAperte(aperte); aggiornaStato(); disegnaCodice(); }
+  setTimeout(() => mostra(n), 450);
+}
+
+function mostra(n){
+  const c = CONTENUTI[n];
+  document.getElementById("c-giorno").textContent = n + " dicembre";
+  document.getElementById("c-icona").textContent = c.icona;
+  document.getElementById("c-tipo").textContent = c.tipo;
+  document.getElementById("c-testo").textContent = c.testo;
+  const r = document.getElementById("c-risposta");
+  const b = document.getElementById("c-svela");
+  r.style.display = "none";
+  if (c.risposta){ r.textContent = c.risposta; b.style.display = "inline-block"; }
+  else b.style.display = "none";
+  const L = document.getElementById("c-lettera");
+  if (n <= 23){ L.style.display = "block"; L.innerHTML = "🔐 Lettera n° " + n + " del codice: <b>" + CODICE[n-1] + "</b>"; }
+  else L.style.display = "none";
+  document.getElementById("c-input").style.display = (n === 24) ? "block" : "none";
+  document.getElementById("c-msg").textContent = "";
+  document.getElementById("finestra").classList.add("vis");
+}
+document.getElementById("c-svela").onclick = () => {
+  document.getElementById("c-risposta").style.display = "block";
+  document.getElementById("c-svela").style.display = "none";
+};
+document.getElementById("c-prova").onclick = () => {
+  const v = document.getElementById("c-campo").value.toUpperCase().replace(/[^A-Z]/g,"");
+  const m = document.getElementById("c-msg");
+  if (v === CODICE){
+    document.getElementById("c-testo").textContent = FINALE;
+    document.getElementById("c-input").style.display = "none";
+    coriandoli();
+  } else {
+    m.style.color = "#d7263d";
+    m.textContent = "❌ Codice sbagliato. Mettile in ordine di giorno, dalla 1 alla 23!";
+  }
+};
+document.getElementById("c-campo").addEventListener("keydown", e => { if (e.key === "Enter") document.getElementById("c-prova").click(); });
+document.getElementById("c-chiudi").onclick = () => document.getElementById("finestra").classList.remove("vis");
+document.getElementById("finestra").onclick = e => { if (e.target.id === "finestra") e.currentTarget.classList.remove("vis"); };
+
+/* ---------- neve ---------- */
+const cv = document.getElementById("neve"), ctx = cv.getContext("2d");
+let fiocchi = [], extra = [];
+function dimensiona(){ cv.width = innerWidth; cv.height = innerHeight; }
+addEventListener("resize", dimensiona); dimensiona();
+for (let i = 0; i < 90; i++) fiocchi.push({x:Math.random()*innerWidth, y:Math.random()*innerHeight, r:Math.random()*3+1, v:Math.random()*1+.4, o:Math.random()*Math.PI*2});
+function coriandoli(){
+  const colori = ["#d7263d","#f4c95d","#1b998b","#ffffff","#7b2d8e"];
+  for (let i = 0; i < 160; i++) extra.push({x:innerWidth/2, y:innerHeight/2, vx:(Math.random()-.5)*12, vy:Math.random()*-12-2, c:colori[i%5], vita:120});
+}
+function anima(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  ctx.fillStyle = "rgba(255,255,255,.85)";
+  fiocchi.forEach(f => {
+    f.y += f.v; f.o += .01; f.x += Math.sin(f.o)*.4;
+    if (f.y > cv.height){ f.y = -5; f.x = Math.random()*cv.width; }
+    ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI*2); ctx.fill();
+  });
+  extra = extra.filter(e => e.vita-- > 0);
+  extra.forEach(e => { e.x += e.vx; e.y += e.vy; e.vy += .3; ctx.fillStyle = e.c; ctx.fillRect(e.x, e.y, 7, 7); });
+  requestAnimationFrame(anima);
+}
+anima();
+</script>
+</body>
+</html>
